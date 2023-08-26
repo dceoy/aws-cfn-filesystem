@@ -9,7 +9,7 @@ Parameters:
   ProjectName:
     Description: Set the project name.
     Type: String
-    Default: nfs
+    Default: nao
   StorageCapacity:
     Description: Set the storage capacity.
     Type: Number
@@ -30,8 +30,12 @@ Parameters:
     Description: Set the weekly maintenance start time.
     Type: String
     Default: 4:16:30
+  SvmAdminPassword:
+    Description: Set the SVM admin password.
+    Type: String
+    Default: netappontap
 Resources:
-  FsxForNetappOntapFileSystem:
+  NetAppOntapMultiAzFileSystem:
     Type: AWS::FSx::FileSystem
     # DeletionPolicy: Retain
     # UpdateReplacePolicy: Retain
@@ -57,19 +61,19 @@ Resources:
         DailyAutomaticBackupStartTime: !Ref DailyAutomaticBackupStartTime
         WeeklyMaintenanceStartTime: !Ref WeeklyMaintenanceStartTime
       SecurityGroupIds:
-        - !Ref FsxForNetappOntapSecurityGroup
+        - !Ref NetAppOntapSecurityGroup
       SubnetIds:  # At most 2 subnets are allowed.
         - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet0
         - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet1
       Tags:
         - Key: Name
-          Value: !Sub ${ProjectName}-fsx-for-netapp-ontap
+          Value: !Sub ${ProjectName}-netapp-ontap-multi-az-filesystem
         - Key: ProjectName
           Value: !Ref ProjectName
-  FsxForNetappOntapSecurityGroup:
+  NetAppOntapSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: !Sub ${ProjectName}-fsx-for-netapp-ontap-security-group
+      GroupName: !Sub ${ProjectName}-netapp-ontap-security-group
       GroupDescription: Security group of Amazon FSx for NetApp ONTAP
       SecurityGroupIngress:
         - IpProtocol: icmp
@@ -211,15 +215,54 @@ Resources:
         Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-Vpc
       Tags:
         - Key: Name
-          Value: !Sub ${ProjectName}-fsx-for-netapp-ontap-security-group
+          Value: !Sub ${ProjectName}-netapp-ontap-security-group
+        - Key: ProjectName
+          Value: !Ref ProjectName
+  NetAppOntapStorageVirtualMachine:
+    Type: AWS::FSx::StorageVirtualMachine
+    Properties:
+      Name: !Sub ${ProjectName}-netapp-ontap-svm
+      FileSystemId: !Ref NetAppOntapMultiAzFileSystem
+      RootVolumeSecurityStyle: MIXED
+      SvmAdminPassword: !Ref SvmAdminPassword
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-netapp-ontap-svm
+        - Key: ProjectName
+          Value: !Ref ProjectName
+  NetAppOntapVolume:
+    Type: AWS::FSx::Volume
+    Properties:
+      Name: !Sub ${ProjectName}-netapp-ontap-volume
+      VolumeType: ONTAP
+      OntapConfiguration:
+        JunctionPath: /volume0
+        StorageVirtualMachineId: !Ref NetAppOntapStorageVirtualMachine
+        StorageEfficiencyEnabled: true
+        SecurityStyle: MIXED
+        SizeInMegabytes: 41
+        TieringPolicy:
+          Name: AUTO
+          CoolingPeriod: 42
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-netapp-ontap-volume
         - Key: ProjectName
           Value: !Ref ProjectName
 Outputs:
-  FsxForNetappOntapFileSystem:
-    Value: !Ref FsxForNetappOntapFileSystem
+  NetAppOntapMultiAzFileSystem:
+    Value: !Ref NetAppOntapMultiAzFileSystem
     Export:
-      Name: !Sub ${AWS::Region}-${AWS::StackName}-FsxForNetappOntapFileSystem
-  FsxForNetappOntapSecurityGroup:
-    Value: !Ref FsxForNetappOntapSecurityGroup
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-NetAppOntapMultiAzFileSystem
+  NetAppOntapSecurityGroup:
+    Value: !Ref NetAppOntapSecurityGroup
     Export:
-      Name: !Sub ${AWS::Region}-${AWS::StackName}-FsxForNetappOntapSecurityGroup
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-NetAppOntapSecurityGroup
+  NetAppOntapStorageVirtualMachine:
+    Value: !Ref NetAppOntapStorageVirtualMachine
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-NetAppOntapStorageVirtualMachine
+  NetAppOntapVolume:
+    Value: !Ref NetAppOntapVolume
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-NetAppOntapVolume
