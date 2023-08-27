@@ -33,7 +33,8 @@ Parameters:
   SvmAdminPassword:
     Description: Set the SVM admin password.
     Type: String
-    Default: netappontap
+    Default: fsx4netappontap
+    NoEcho: true
 Resources:
   NetAppOntapMultiAzFileSystem:
     Type: AWS::FSx::FileSystem
@@ -74,7 +75,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: !Sub ${ProjectName}-netapp-ontap-security-group
-      GroupDescription: Security group of Amazon FSx for NetApp ONTAP
+      GroupDescription: Security group for NetApp ONTAP
       SecurityGroupIngress:
         - IpProtocol: icmp
           FromPort: -1
