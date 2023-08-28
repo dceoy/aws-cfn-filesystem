@@ -35,6 +35,10 @@ Parameters:
     Type: String
     Default: fsx4netappontap
     NoEcho: true
+  VolumeName:
+    Description: Set the volume name.
+    Type: String
+    Default: volume0
 Resources:
   NetAppOntapMultiAzFileSystem:
     Type: AWS::FSx::FileSystem
@@ -234,10 +238,10 @@ Resources:
   NetAppOntapVolume:
     Type: AWS::FSx::Volume
     Properties:
-      Name: !Sub ${ProjectName}-netapp-ontap-volume
+      Name: !Ref VolumeName
       VolumeType: ONTAP
       OntapConfiguration:
-        JunctionPath: /volume0
+        JunctionPath: !Sub /${VolumeName}
         StorageVirtualMachineId: !Ref NetAppOntapStorageVirtualMachine
         StorageEfficiencyEnabled: true
         SecurityStyle: MIXED
@@ -247,7 +251,7 @@ Resources:
           CoolingPeriod: 42
       Tags:
         - Key: Name
-          Value: !Sub ${ProjectName}-netapp-ontap-volume
+          Value: !Ref VolumeName
         - Key: ProjectName
           Value: !Ref ProjectName
 Outputs:

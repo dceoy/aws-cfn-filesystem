@@ -21,19 +21,19 @@ Installation
 
     ```sh
     $ rain deploy \
-        --params ProjectName=nao-dev \
+        --params ProjectName=fs-dev \
         aws-cfn-vpc-for-slc/vpc-private-subnets-with-gateway-endpoints.cfn.yml \
-        nao-dev-vpc-private-subnets-with-gateway-endpoints
+        fs-dev-vpc-private-subnets-with-gateway-endpoints
     $ rain deploy \
-        --params VpcStackName=nao-dev-vpc-private-subnets-with-gateway-endpoints \
+        --params VpcStackName=fs-dev-vpc-private-subnets-with-gateway-endpoints \
         aws-cfn-vpc-for-slc/vpc-interface-endpoints-for-ssm-and-ec2.cfn.yml \
-        nao-vpc-interface-endpoints-for-ssm-and-ec2
+        fs-vpc-interface-endpoints-for-ssm-and-ec2
     ```
 
 4.  Deploy stacks for NetApp ONTAP.
 
     ```sh
     $ rain deploy \
-        --params ProjectName=nao-dev,VpcStackName=nao-dev-vpc-private-subnets-with-gateway-endpoints \
-        fsx-for-netapp-ontap.cfn.yml nao-fsx-for-netapp-ontap
+        --params ProjectName=fs-dev,VpcStackName=fs-dev-vpc-private-subnets-with-gateway-endpoints \
+        fsx-for-netapp-ontap.cfn.yml fs-fsx-for-netapp-ontap
     ```
