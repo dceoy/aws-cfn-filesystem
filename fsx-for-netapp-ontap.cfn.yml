@@ -33,7 +33,7 @@ Parameters:
   SvmAdminPassword:
     Description: Set the SVM admin password.
     Type: String
-    Default: fsx4netappontap
+    Default: FSx4NetAppONTAP
     NoEcho: true
   VolumeName:
     Description: Set the volume name.

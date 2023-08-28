@@ -1,0 +1,192 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: FSx for Windows File Server file system
+Parameters:
+  VpcStackName:
+    Description: Set the VPC stack name.
+    Type: String
+    Default: vpc-private-subnets-with-gateway-endpoints
+  ProjectName:
+    Description: Set the project name.
+    Type: String
+    Default: wfs
+  StorageCapacity:
+    Description: Set the storage capacity.
+    Type: Number
+    Default: 2000
+  ThroughputCapacity:
+    Description: Set the throughput capacity.
+    Type: Number
+    Default: 32
+  AutomaticBackupRetentionDays:
+    Description: Set the automatic backup retention days.
+    Type: Number
+    Default: 90
+  DailyAutomaticBackupStartTime:
+    Description: Set the daily automatic backup start time.
+    Type: String
+    Default: 01:00
+  WeeklyMaintenanceStartTime:
+    Description: Set the weekly maintenance start time.
+    Type: String
+    Default: 4:16:30
+  AdAdminPassword:
+    Description: Set the AD admin password.
+    Type: String
+    Default: FSx4WindowsFileServer
+    NoEcho: true
+Resources:
+  WindowsMadFileSystem:
+    Type: AWS::FSx::FileSystem
+    Properties:
+      FileSystemType: WINDOWS
+      StorageType: SSD
+      StorageCapacity: !Ref StorageCapacity
+      WindowsConfiguration:
+        DeploymentType: MULTI_AZ_1
+        DiskIopsConfiguration:
+          Mode: AUTOMATIC   # AUTOMATIC | USER_PROVISIONED
+          # Iops: 3072
+        ThroughputCapacity: !Ref ThroughputCapacity
+        CopyTagsToBackups: false
+        PreferredSubnetId:
+          Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet0
+        ActiveDirectoryId: !Ref ManagedActiveDirectory
+        AutomaticBackupRetentionDays: !Ref AutomaticBackupRetentionDays
+        DailyAutomaticBackupStartTime: !Ref DailyAutomaticBackupStartTime
+        WeeklyMaintenanceStartTime: !Ref WeeklyMaintenanceStartTime
+        Aliases:
+          - financials.corp.example.com
+      SecurityGroupIds:
+        - !Ref WindowsFileServerSecurityGroup
+      SubnetIds:
+        - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet0
+        - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-windows-self-managed-ad-filesystem
+        - Key: ProjectName
+          Value: !Ref ProjectName
+  ManagedActiveDirectory:
+    Type: AWS::DirectoryService::MicrosoftAD
+    Properties:
+      Name: corp.example.com
+      # ShortName: String
+      Password: !Ref AdAdminPassword
+      VpcSettings:
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet0
+          - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet1
+        VpcId:
+          Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-Vpc
+  WindowsFileServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${ProjectName}-windows-file-server-security-group
+      GroupDescription: Security group for Windows File Server
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 53
+          ToPort: 53
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: udp
+          FromPort: 53
+          ToPort: 53
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 88
+          ToPort: 88
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: udp
+          FromPort: 88
+          ToPort: 88
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 464
+          ToPort: 464
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: udp
+          FromPort: 464
+          ToPort: 464
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 389
+          ToPort: 389
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: udp
+          FromPort: 389
+          ToPort: 389
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: udp
+          FromPort: 123
+          ToPort: 123
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 135
+          ToPort: 135
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 445
+          ToPort: 445
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 636
+          ToPort: 636
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 3268
+          ToPort: 3268
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 3269
+          ToPort: 3269
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 5985
+          ToPort: 5985
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 9389
+          ToPort: 9389
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 49152
+          ToPort: 65535
+          SourceSecurityGroupId:
+            Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+      VpcId:
+        Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-windows-file-server-security-group
+        - Key: ProjectName
+          Value: !Ref ProjectName
+Outputs:
+  WindowsMadFileSystem:
+    Value: !Ref WindowsMadFileSystem
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-WindowsMadFileSystem
+  ManagedActiveDirectory:
+    Value: !Ref ManagedActiveDirectory
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-ManagedActiveDirectory
+  WindowsFileServerSecurityGroup:
+    Value: !Ref WindowsFileServerSecurityGroup
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-WindowsFileServerSecurityGroup

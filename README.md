@@ -1,7 +1,7 @@
 aws-cfn-filesystem
 ==================
 
-AWS CloudFormation stacks for file system
+AWS CloudFormation stacks for file systems
 
 [![Lint](https://github.com/dceoy/aws-cfn-filesystem/actions/workflows/lint.yml/badge.svg)](https://github.com/dceoy/aws-cfn-filesystem/actions/workflows/lint.yml)
 
