@@ -30,8 +30,12 @@ Parameters:
     Description: Set the weekly maintenance start time.
     Type: String
     Default: 4:16:30
+  MicrosoftAdName:
+    Description: Set the Microsoft AD name.
+    Type: String
+    Default: mad.internal
   AdAdminPassword:
-    Description: Set the AD admin password.
+    Description: Set the Microsoft AD admin password.
     Type: String
     Default: FSx4WindowsFileServer
     NoEcho: true
@@ -51,12 +55,12 @@ Resources:
         CopyTagsToBackups: false
         PreferredSubnetId:
           Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet0
-        ActiveDirectoryId: !Ref ManagedActiveDirectory
+        ActiveDirectoryId: !Ref MicrosoftActiveDirectory
         AutomaticBackupRetentionDays: !Ref AutomaticBackupRetentionDays
         DailyAutomaticBackupStartTime: !Ref DailyAutomaticBackupStartTime
         WeeklyMaintenanceStartTime: !Ref WeeklyMaintenanceStartTime
         Aliases:
-          - financials.corp.example.com
+          - !Sub wfs.${MicrosoftAdName}
       SecurityGroupIds:
         - !Ref WindowsFileServerSecurityGroup
       SubnetIds:
@@ -67,10 +71,10 @@ Resources:
           Value: !Sub ${ProjectName}-windows-self-managed-ad-filesystem
         - Key: ProjectName
           Value: !Ref ProjectName
-  ManagedActiveDirectory:
+  MicrosoftActiveDirectory:
     Type: AWS::DirectoryService::MicrosoftAD
     Properties:
-      Name: corp.example.com
+      Name: !Ref MicrosoftAdName
       # ShortName: String
       Password: !Ref AdAdminPassword
       VpcSettings:
@@ -182,10 +186,10 @@ Outputs:
     Value: !Ref WindowsMadFileSystem
     Export:
       Name: !Sub ${AWS::Region}-${AWS::StackName}-WindowsMadFileSystem
-  ManagedActiveDirectory:
-    Value: !Ref ManagedActiveDirectory
+  MicrosoftActiveDirectory:
+    Value: !Ref MicrosoftActiveDirectory
     Export:
-      Name: !Sub ${AWS::Region}-${AWS::StackName}-ManagedActiveDirectory
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-MicrosoftActiveDirectory
   WindowsFileServerSecurityGroup:
     Value: !Ref WindowsFileServerSecurityGroup
     Export:

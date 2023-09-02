@@ -27,13 +27,23 @@ Installation
     $ rain deploy \
         --params VpcStackName=fs-dev-vpc-private-subnets-with-gateway-endpoints \
         aws-cfn-vpc-for-slc/vpc-interface-endpoints-for-ssm-and-ec2.cfn.yml \
-        fs-vpc-interface-endpoints-for-ssm-and-ec2
+        fs-dev-vpc-interface-endpoints-for-ssm-and-ec2
     ```
 
-4.  Deploy stacks for NetApp ONTAP.
+4.  Deploy stacks for FSx.
 
-    ```sh
-    $ rain deploy \
-        --params ProjectName=fs-dev,VpcStackName=fs-dev-vpc-private-subnets-with-gateway-endpoints \
-        fsx-for-netapp-ontap.cfn.yml fs-fsx-for-netapp-ontap
-    ```
+    - FSx for NetApp ONTAP
+
+      ```sh
+      $ rain deploy \
+          --params ProjectName=fs-dev,VpcStackName=fs-dev-vpc-private-subnets-with-gateway-endpoints \
+          fsx-for-netapp-ontap.cfn.yml fs-dev-fsx-for-netapp-ontap
+      ```
+
+    - FSx for Windows File Server
+
+      ```sh
+      $ rain deploy \
+          --params ProjectName=fs-dev,VpcStackName=fs-dev-vpc-private-subnets-with-gateway-endpoints \
+          fsx-for-windows-file-server.cfn.yml fs-dev-fsx-for-windows-file-server
+      ```
