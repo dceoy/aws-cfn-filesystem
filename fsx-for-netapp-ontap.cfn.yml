@@ -9,7 +9,7 @@ Parameters:
   ProjectName:
     Description: Set the project name.
     Type: String
-    Default: nao
+    Default: fs
   StorageCapacity:
     Description: Set the storage capacity.
     Type: Number

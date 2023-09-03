@@ -9,7 +9,7 @@ Parameters:
   ProjectName:
     Description: Set the project name.
     Type: String
-    Default: wfs
+    Default: fs
   StorageCapacity:
     Description: Set the storage capacity.
     Type: Number
@@ -34,7 +34,7 @@ Parameters:
     Description: Set the Microsoft AD name.
     Type: String
     Default: mad.internal
-  AdAdminPassword:
+  MicrosoftAdAdminPassword:
     Description: Set the Microsoft AD admin password.
     Type: String
     Default: FSx4WindowsFileServer
@@ -68,7 +68,7 @@ Resources:
         - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet1
       Tags:
         - Key: Name
-          Value: !Sub ${ProjectName}-windows-self-managed-ad-filesystem
+          Value: !Sub ${ProjectName}-windows-filesystem
         - Key: ProjectName
           Value: !Ref ProjectName
   MicrosoftActiveDirectory:
@@ -76,7 +76,7 @@ Resources:
     Properties:
       Name: !Ref MicrosoftAdName
       # ShortName: String
-      Password: !Ref AdAdminPassword
+      Password: !Ref MicrosoftAdAdminPassword
       VpcSettings:
         SubnetIds:
           - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet0

@@ -1,0 +1,258 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: EC2 instance with IAM role and VPC interface endpoints for SSM and EC2
+Parameters:
+  VpcStackName:
+    Description: Set the VPC stack name.
+    Type: String
+    Default: vpc-private-subnets-with-gateway-endpoints
+  ProjectName:
+    Description: Set the project name.
+    Type: String
+    Default: fs
+  KeyName:
+    Description: Set a name of an existing EC2 KeyPair to enable SSH access to the instance.
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+  ImageId:
+    Description: Set an EC2 AMI ID.
+    Type: AWS::EC2::Image::Id
+    Default: ami-0ae451dcc36be7bb3
+    ConstraintDescription: must be a valid EC2 instance type.
+  InstanceType:
+    Description: Set an EC2 instance type.
+    Type: String
+    Default: t2.micro
+    ConstraintDescription: must be a valid EC2 instance type.
+  EbsVolumeSize:
+    Description: Set EBS volume size.
+    Type: Number
+    MinValue: 0
+    Default: 30
+  CifsUser:
+    Description: Set the Microsoft AD name.
+    Type: String
+    Default: Admin@MAD.INTERNAL
+  CifsPassword:
+    Description: Set the Microsoft AD admin password.
+    Type: String
+    Default: FSx4WindowsFileServer
+    NoEcho: true
+Resources:
+  Ec2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref ImageId
+      KeyName: !Ref KeyName
+      InstanceType: !Ref InstanceType
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          NetworkInterfaceId: !Ref Ec2NetworkInterface
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: !Ref EbsVolumeSize
+            VolumeType: gp3
+            Encrypted: true
+            DeleteOnTermination: true
+      InstanceInitiatedShutdownBehavior: terminate
+      IamInstanceProfile: !Ref Ec2InstanceProfile
+      UserData:
+        Fn::Base64:
+          Fn::Sub:
+            - |
+              #!/bin/bash
+              set -euo pipefail
+              yum -y upgrade
+              yum -y install cifs-utils
+              mkdir -p /mnt/fsx
+              mount -t cifs -o vers=3.0,sec=ntlmsspi,user=${User},password=${Password} //mad.internal/share /mnt/fsx
+              yum clean all
+              rm -rf /var/cache/yum
+            - User: !Ref CifsUser
+              Password: !Ref CifsPassword
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-ec2-instance
+        - Key: ProjectName
+          Value: !Ref ProjectName
+  Ec2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-Ec2InstanceRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+                - ssm.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-Ec2InstanceRole
+        - Key: ProjectName
+          Value: !Ref ProjectName
+  Ec2NetworkInterface:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      InterfaceType: interface
+      SourceDestCheck: true
+      GroupSet:
+        - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+      SubnetId:
+        Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet0
+      # PrivateIpAddress: String
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-ec2-network-interface
+        - Key: ProjectName
+          Value: !Ref ProjectName
+  Ec2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub ${ProjectName}-Ec2InstanceProfile
+      Path: /
+      Roles:
+        - !Ref Ec2InstanceRole
+  Ec2InterfaceEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Resource: '*'
+            Effect: Allow
+            Principal: '*'
+            Action: '*'
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet0
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2
+      VpcEndpointType: Interface
+      VpcId:
+        Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-Vpc
+  Ec2MessagesInterfaceEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Resource: '*'
+            Effect: Allow
+            Principal: '*'
+            Action: '*'
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet0
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2messages
+      VpcEndpointType: Interface
+      VpcId:
+        Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-Vpc
+  SsmInterfaceEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Resource: '*'
+            Effect: Allow
+            Principal: '*'
+            Action: '*'
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet0
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
+      VpcEndpointType: Interface
+      VpcId:
+        Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-Vpc
+  SsmMessagesInterfaceEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Resource: '*'
+            Effect: Allow
+            Principal: '*'
+            Action: '*'
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet0
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssmmessages
+      VpcEndpointType: Interface
+      VpcId:
+        Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-Vpc
+#   SecretsManagerInterfaceEndpoint:
+#     Type: AWS::EC2::VPCEndpoint
+#     Properties:
+#       PolicyDocument:
+#         Version: 2012-10-17
+#         Statement:
+#           - Resource: '*'
+#             Effect: Allow
+#             Principal: '*'
+#             Action: '*'
+#       PrivateDnsEnabled: true
+#       SubnetIds:
+#         - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-PrivateSubnet0
+#       SecurityGroupIds:
+#         - Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-DefaultSecurityGroup
+#       ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
+#       VpcEndpointType: Interface
+#       VpcId:
+#         Fn::ImportValue: !Sub ${AWS::Region}-${VpcStackName}-Vpc
+Outputs:
+  Ec2InstanceId:
+    Description: EC2 instance Id
+    Value: !Ref Ec2Instance
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-Ec2InstanceId
+  Ec2InstanceRoleArn:
+    Description: EC2 instance role Arn
+    Value: !GetAtt Ec2InstanceRole.Arn
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-Ec2InstanceRoleArn
+  Ec2InstanceProfileArn:
+    Description: EC2 instance profile Arn
+    Value: !GetAtt Ec2InstanceProfile.Arn
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-Ec2InstanceProfileArn
+  Ec2InterfaceEndpointId:
+    Description: EC2 interface endpoint Id
+    Value: !Ref Ec2InterfaceEndpoint
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-Ec2InterfaceEndpoint
+  Ec2MessagesInterfaceEndpointId:
+    Description: EC2 messages interface endpoint Id
+    Value: !Ref Ec2MessagesInterfaceEndpoint
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-Ec2MessagesInterfaceEndpoint
+  SsmInterfaceEndpointId:
+    Description: SSM interface endpoint Id
+    Value: !Ref SsmInterfaceEndpoint
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-SsmInterfaceEndpoint
+  SsmMessagesInterfaceEndpointId:
+    Description: SSM messages interface endpoint Id
+    Value: !Ref SsmMessagesInterfaceEndpoint
+    Export:
+      Name: !Sub ${AWS::Region}-${AWS::StackName}-SsmMessagesInterfaceEndpoint
+#   SecretsManagerInterfaceEndpointId:
+#     Description: Secrets manager interface endpoint Id
+#     Value: !Ref SecretsManagerInterfaceEndpoint
+#     Export:
+#       Name: !Sub ${AWS::Region}-${AWS::StackName}-SecretsManagerInterfaceEndpoint
