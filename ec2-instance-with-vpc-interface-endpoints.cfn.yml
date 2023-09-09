@@ -65,8 +65,8 @@ Resources:
               set -euo pipefail
               yum -y upgrade
               yum -y install cifs-utils
-              mkdir -p /mnt/fsx
-              mount -t cifs -o vers=3.0,sec=ntlmsspi,user=${User},password=${Password} //mad.internal/share /mnt/fsx
+              # mkdir -p /mnt/fsx
+              # mount -t cifs -o vers=3.0,sec=ntlmsspi,user=${User},password=${Password},file_mode=0644,dir_mode=0755 //wfs.mad.internal/share /mnt/fsx
               yum clean all
               rm -rf /var/cache/yum
             - User: !Ref CifsUser
